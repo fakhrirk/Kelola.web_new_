@@ -13,64 +13,77 @@ use Illuminate\View\View;
 
 class CustomPasswordResetController extends Controller
 {
+    /**
+     * Menampilkan form awal untuk meminta token.
+     */
     public function showRequestForm(): View
     {
         return view('auth.forgot-password');
     }
 
-    // PERUBAHAN 1: Mengembalikan RedirectResponse, bukan JSON
+    /**
+     * Memproses permintaan dari form, menyimpan ke DB, dan redirect ke halaman status.
+     */
     public function handleRequest(Request $request): RedirectResponse
     {
         $request->validate(['email' => 'required|email|exists:users,email']);
 
+        // Hapus permintaan lama jika ada untuk email yang sama
         PasswordResetRequest::where('email', $request->email)->delete();
 
         $token = Str::random(60);
 
+        // Buat entri baru di database
         PasswordResetRequest::create([
             'email' => $request->email,
             'token' => $token,
-            'status' => 'pending',
+            'status' => 'pending', // Pastikan statusnya 'pending'
         ]);
 
-        // Arahkan user ke halaman status dengan membawa token
+        // Arahkan user ke halaman status kustom kita
         return redirect()->route('password.status', ['token' => $token]);
     }
 
-    // PERUBAHAN 2: Metode baru untuk halaman status
+    /**
+     * Menampilkan halaman status yang akan refresh otomatis.
+     */
     public function showStatusPage(string $token): View|RedirectResponse
     {
         $resetRequest = PasswordResetRequest::where('token', $token)->first();
 
-        // Jika token tidak ditemukan, kembalikan ke awal
         if (!$resetRequest) {
-            return redirect()->route('password.request')->with('error', 'Permintaan tidak valid.');
+            return redirect()->route('password.request')->with('error', 'Permintaan tidak valid atau telah kedaluwarsa.');
         }
 
-        // Jika sudah disetujui, langsung arahkan ke form reset
+        // Jika Owner sudah menyetujui, langsung arahkan ke form reset password
         if ($resetRequest->status === 'approved') {
             return redirect()->route('password.reset', ['token' => $token]);
         }
 
-        // Jika masih pending atau ditolak, tampilkan halaman status
-        return view('auth.password-status', ['status' => $resetRequest->status]);
+        // Jika masih pending, tampilkan halaman status "tunggu"
+        return view('auth.password-status');
     }
 
+    /**
+     * Menampilkan form untuk mengisi password baru.
+     */
     public function showResetForm(string $token): View|RedirectResponse
     {
         $requestData = PasswordResetRequest::where('token', $token)->where('status', 'approved')->first();
 
         if (!$requestData) {
             return redirect()->route('password.request')
-                ->with('error', 'Token tidak valid, kedaluwarsa, atau permintaan Anda belum disetujui.');
+                ->with('error', 'Token tidak valid atau permintaan Anda belum disetujui.');
         }
 
         return view('auth.reset-password', ['token' => $token, 'email' => $requestData->email]);
     }
 
+    /**
+     * Memproses penyimpanan password baru.
+     */
     public function handleReset(Request $request): RedirectResponse
     {
-        // ... (Fungsi ini tidak perlu diubah, sudah benar)
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',

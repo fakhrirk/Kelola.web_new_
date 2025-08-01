@@ -11,7 +11,7 @@ Route::get('/', function () {
     return view('auth.login');
 });
 
-// Rute untuk Alur Lupa Password Kustom
+// Rute untuk Alur Lupa Password Kustom (Versi PHP-Only)
 Route::middleware('guest')->group(function () {
     // Menampilkan form awal untuk lupa password
     Route::get('forgot-password', [CustomPasswordResetController::class, 'showRequestForm'])->name('password.request');
@@ -29,8 +29,9 @@ Route::middleware('guest')->group(function () {
     Route::post('reset-password', [CustomPasswordResetController::class, 'handleReset'])->name('password.update');
 });
 
-// Rute API untuk mengecek status (tidak perlu middleware)
-Route::get('password-reset-status/{token}', [CustomPasswordResetController::class, 'checkRequestStatus'])->name('password.status');
+// PERBAIKAN: Route duplikat di bawah ini telah dihapus.
+// Route ini adalah sisa dari implementasi JavaScript dan tidak diperlukan untuk alur PHP.
+// Route::get('password-reset-status/{token}', [CustomPasswordResetController::class, 'checkRequestStatus'])->name('password.status');
 
 // Grup Rute untuk User yang Sudah Login
 Route::middleware(['auth', 'verified'])->group(function () {
